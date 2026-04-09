@@ -16,11 +16,10 @@
     }
   } catch (e) {}
 
-  // 2. Atualiza botao WhatsApp — roda imediatamente (GTM ja garante DOM pronto)
+  // 2. Atualiza botao — roda apos window.load (depois do script do tema)
   function updateBtn() {
     var btn = document.getElementById('whatsapp-float');
     if (!btn) return;
-
     try {
       var stored = sessionStorage.getItem(KEY);
       var utm    = stored ? JSON.parse(stored) : null;
@@ -49,12 +48,11 @@
     } catch (e) {}
   }
 
-  // Rodar imediatamente (GTM injeta apos DOM pronto)
-  updateBtn();
-
-  // Fallback: se por algum motivo o elemento ainda nao existir
-  if (!document.getElementById('whatsapp-float')) {
-    document.addEventListener('DOMContentLoaded', updateBtn);
+  // Rodar APOS window.load para garantir que o script do tema ja executou
+  if (document.readyState === 'complete') {
+    updateBtn();
+  } else {
+    window.addEventListener('load', updateBtn);
   }
 
 })();
