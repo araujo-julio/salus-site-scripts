@@ -5,7 +5,7 @@
   var PHONE = '5519996995087';
   var UTMS  = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
 
-  // 1. Captura UTMs na entrada do site
+  // 1. Captura UTMs na entrada (roda imediatamente)
   try {
     var p = new URLSearchParams(window.location.search);
     var found = {};
@@ -16,10 +16,11 @@
     }
   } catch (e) {}
 
-  // 2. Atualiza botao WhatsApp apos pagina carregar
-  document.addEventListener('DOMContentLoaded', function () {
+  // 2. Atualiza botao WhatsApp — roda imediatamente (GTM ja garante DOM pronto)
+  function updateBtn() {
     var btn = document.getElementById('whatsapp-float');
     if (!btn) return;
+
     try {
       var stored = sessionStorage.getItem(KEY);
       var utm    = stored ? JSON.parse(stored) : null;
@@ -29,23 +30,31 @@
       var msg = 'Ola! Gostaria de mais informacoes sobre "' + titulo + '"\n';
 
       if (utm) {
-        msg += '\n Origem: '   + (utm.utm_source   || '-');
+        msg += '\nOrigem: '    + (utm.utm_source   || '-');
         if (utm.utm_medium)   msg += ' | Meio: '     + utm.utm_medium;
         if (utm.utm_campaign) msg += ' | Campanha: ' + utm.utm_campaign;
         if (utm.utm_content)  msg += ' | Anuncio: '  + utm.utm_content;
-        msg += '\n Entrou em: ' + utm.entry_page;
+        msg += '\nEntrou em: ' + utm.entry_page;
         if (utm.entry_page !== saida) {
-          msg += '\n Saiu de: ' + saida;
+          msg += '\nSaiu de: ' + saida;
         }
       } else {
-        msg += '\n Origem: Acesso direto';
-        msg += '\n Pagina: ' + saida;
+        msg += '\nOrigem: Acesso direto';
+        msg += '\nPagina: ' + saida;
       }
 
       btn.setAttribute('href',
         'https://wa.me/' + PHONE + '?text=' + encodeURIComponent(msg)
       );
     } catch (e) {}
-  });
+  }
+
+  // Rodar imediatamente (GTM injeta apos DOM pronto)
+  updateBtn();
+
+  // Fallback: se por algum motivo o elemento ainda nao existir
+  if (!document.getElementById('whatsapp-float')) {
+    document.addEventListener('DOMContentLoaded', updateBtn);
+  }
 
 })();
