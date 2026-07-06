@@ -4,6 +4,7 @@
   var KEY   = 'salus_utm';
   var PHONE = '5519996995087';
   var UTMS  = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+  var CLICK_IDS = ['gclid','gbraid','wbraid']; // IDs de clique do Google (conversao offline)
 
   // 1. Captura origem na entrada (UTM manual ou Google Ads auto-tagging)
   try {
@@ -19,11 +20,25 @@
       found._auto_tagged = true;
     }
 
+    // 1b. Guarda o gclid/gbraid/wbraid REAL (alem do rotulo) p/ conversao offline
+    CLICK_IDS.forEach(function (k) { var v = p.get(k); if (v) found[k] = v; });
+
     if (Object.keys(found).length > 0 && !sessionStorage.getItem(KEY)) {
       found.entry_page = window.location.href;
       sessionStorage.setItem(KEY, JSON.stringify(found));
     }
   } catch (e) {}
+
+  // Fallback: le o gclid do cookie _gcl_aw (setado pelo Conversion Linker do GTM)
+  // Formato do cookie: GCL.<timestamp>.<gclid>
+  function gclidFromCookie() {
+    try {
+      var m = document.cookie.match(/(?:^|;\s*)_gcl_aw=([^;]+)/);
+      if (!m) return null;
+      var parts = decodeURIComponent(m[1]).split('.');
+      return parts.length >= 3 ? parts.slice(2).join('.') : null;
+    } catch (e) { return null; }
+  }
 
   // 2. Intercepta clique no botao WhatsApp e injeta UTMs na mensagem
   function buildMsg() {
@@ -46,6 +61,15 @@
         msg += '\nOrigem: Acesso direto';
         msg += '\nPagina: ' + saida;
       }
+
+      // Anexa os IDs de clique do Google (gclid real) p/ match de conversao offline.
+      // Linha discreta no fim, parseavel no Kommo. So aparece quando existe ID.
+      var ids = {
+        gclid:  (utm && utm.gclid)  || gclidFromCookie(),
+        gbraid: (utm && utm.gbraid) || null,
+        wbraid: (utm && utm.wbraid) || null
+      };
+      CLICK_IDS.forEach(function (k) { if (ids[k]) msg += '\n' + k + ': ' + ids[k]; });
 
       return msg;
     } catch (e) { return null; }
